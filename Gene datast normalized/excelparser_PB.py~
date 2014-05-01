@@ -1,0 +1,80 @@
+import xlrd
+from matplotlib.mlab import PCA
+import numpy as np
+from scipy.cluster.vq import *
+from sklearn.metrics import *
+def retgenname(dicname):
+	workbook = xlrd.open_workbook('PB_CereNamesFinal.xlsx')
+	worksheet = workbook.sheet_by_name('Sheet1') 
+	num_rows = worksheet.nrows - 1
+	num_cells = worksheet.ncols - 1
+	curr_row = -1
+	while curr_row < num_rows:
+		curr_row += 1
+		row = worksheet.row(curr_row)
+		#print 'Row:', curr_row
+		curr_cell = -1		
+		while curr_cell < num_cells:
+			curr_cell += 1
+			# Cell Types: 0=Empty, 1=Text, 2=Number, 3=Date, 4=Boolean, 5=Error, 6=Blank
+			cell_type = worksheet.cell_type(curr_row, curr_cell)
+			cell_value = worksheet.cell_value(curr_row, curr_cell)
+			dicname[curr_row]=str(cell_value)
+			#print '	', cell_type, ':', cell_value 
+
+def main():    
+	workbook = xlrd.open_workbook('PB_CereRMANewCDF.xlsx')
+	worksheet = workbook.sheet_by_name('Sheet1')
+	num_rows = worksheet.nrows - 1
+	num_cells = worksheet.ncols - 1
+	curr_row = -1
+	x=np.zeros((20292,28))
+	dicgenes=dict()
+	i=0
+	while curr_row < num_rows:
+		curr_row += 1
+		if curr_row==0:
+		   continue
+		row = worksheet.row(curr_row)
+		#print 'Row:', curr_row
+		curr_cell = -1
+		j=0
+		while curr_cell < num_cells:
+			curr_cell += 1
+			# Cell Types: 0=Empty, 1=Text, 2=Number, 3=Date, 4=Boolean, 5=Error, 6=Blank
+			cell_type = worksheet.cell_type(curr_row, curr_cell)
+			cell_value = worksheet.cell_value(curr_row, curr_cell)
+			#print '	', cell_type, ':', cell_value
+			if cell_type==1:
+			   dicgenes[curr_row]=cell_value
+			else:
+			   x[i][j]=cell_value
+			   j+=1
+		i+=1	
+
+	'''i=0
+	while i<20292:
+	   j=0
+	   while j<63:
+	     print x[i][j],
+	     j+=1
+	   print "\n"
+	   i+=1  '''
+	results = PCA(x)
+	#print (results.Y)
+	res, idx = kmeans2(results.Y,8)
+	#print res
+	i=0
+	dicname=dict()
+	dicclust=np.zeros(20292)
+	retgenname(dicname)
+	while i<len(idx):    
+	    f=open('./'+str(idx[i])+'.txt','a')
+	    f.write(dicname[i])
+	    f.write("\n")
+	    print "%s belongs to %d"%(dicgenes[i+1],idx[i])
+	    dicclust[i]=int(idx[i])
+	    i+=1
+	print "silhouette score",
+	print silhouette_score(x, dicclust,metric='euclidean')    
+main()
